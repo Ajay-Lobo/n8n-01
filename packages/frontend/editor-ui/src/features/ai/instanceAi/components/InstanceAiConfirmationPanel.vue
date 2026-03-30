@@ -138,6 +138,23 @@ function handlePlanRequestChanges(requestId: string, feedback: string) {
 }
 
 /** True when every item in the approval-wrapped group is a generic approval (not domain access). */
+function isDenyDecision(decision: string): boolean {
+	return decision === 'denyOnce' || decision === 'alwaysDeny';
+}
+
+/** Map a ResourceDecision key to its translated label. */
+function getDecisionLabel(decision: string): string {
+	const labels: Record<string, string> = {
+		allowOnce: i18n.baseText('instanceAi.gatewayConfirmation.allowOnce'),
+		allowForSession: i18n.baseText('instanceAi.gatewayConfirmation.allowForSession'),
+		alwaysAllow: i18n.baseText('instanceAi.gatewayConfirmation.alwaysAllow'),
+		denyOnce: i18n.baseText('instanceAi.gatewayConfirmation.denyOnce'),
+		alwaysDeny: i18n.baseText('instanceAi.gatewayConfirmation.alwaysDeny'),
+	};
+	return labels[decision] ?? decision;
+}
+
+/** True when every item in the group is a generic approval (not domain/cred/text). */
 function isAllGenericApproval(items: PendingConfirmationItem[]): boolean {
 	return items.every((item) => !item.toolCall.confirmation!.domainAccess);
 }
@@ -245,6 +262,53 @@ function isAllGenericApproval(items: PendingConfirmationItem[]): boolean {
 							>
 								{{ i18n.baseText('instanceAi.askUser.submit') }}
 							</N8nButton>
+						</div>
+					</div>
+				</div>
+				<!-- Resource-access decision (gateway permission mode) -->
+				<div
+					v-else-if="
+						chunk.item.toolCall.confirmation!.inputType === 'resource-decision' &&
+						chunk.item.toolCall.confirmation!.resourceDecision
+					"
+					:key="'rd-' + chunk.item.toolCall.confirmation!.requestId"
+					:class="[$style.confirmation, $style.root]"
+					data-test-id="instance-ai-gateway-confirmation-panel"
+				>
+					<div :class="[$style.items, $style.confirmBody]">
+						<div :class="$style.approvalRow">
+							<div :class="$style.approvalRowBody">
+								<span :class="$style.toolLabel">
+									{{
+										i18n.baseText('instanceAi.gatewayConfirmation.prompt', {
+											interpolate: {
+												resources: chunk.item.toolCall.confirmation!.resourceDecision.resource,
+											},
+										})
+									}}
+								</span>
+								<span :class="$style.preview">
+									{{ chunk.item.toolCall.confirmation!.resourceDecision!.description }}
+								</span>
+							</div>
+							<div :class="$style.approvalActions">
+								<N8nButton
+									v-for="[token, decision] in Object.entries(
+										chunk.item.toolCall.confirmation!.resourceDecision!.options,
+									)"
+									:key="token"
+									size="small"
+									:type="isDenyDecision(decision) ? 'secondary' : 'primary'"
+									@click="
+										store.confirmResourceDecision(
+											chunk.item.toolCall.confirmation!.requestId,
+											token,
+										)
+									"
+								>
+									{{ getDecisionLabel(decision) }}
+								</N8nButton>
+							</div>
 						</div>
 					</div>
 				</div>
