@@ -72,7 +72,7 @@ export interface ExecutionDebugInfo extends ExecutionResult {
 		name: string;
 		type: string;
 		error: string;
-		inputData?: Record<string, unknown>;
+		inputData?: Record<string, unknown> | string;
 	};
 	nodeTrace: Array<{
 		name: string;
@@ -324,7 +324,7 @@ export interface SearchableNodeDescription {
 export interface DataTableSummary {
 	id: string;
 	name: string;
-	projectId: string;
+	projectId?: string;
 	columns: Array<{ id: string; name: string; type: string }>;
 	createdAt: string;
 	updatedAt: string;

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { MastraMessageContentV2 } from '@mastra/core/agent';
 import type { MastraDBMessage, StorageThreadType } from '@mastra/core/memory';
 import type {
@@ -483,9 +485,12 @@ export class TypeORMMemoryStorage extends MemoryStorage {
 		messages: MastraDBMessage[];
 	}): Promise<{ messages: MastraDBMessage[] }> {
 		const entities = messages.map((m) => {
+			if (!m.threadId) {
+				throw new Error(`Message ${m.id} is missing required threadId`);
+			}
 			const entity = this.messageRepo.create({
 				id: m.id,
-				threadId: m.threadId ?? '',
+				threadId: m.threadId,
 				content: JSON.stringify(m.content),
 				role: m.role,
 				type: m.type ?? null,
@@ -635,7 +640,7 @@ export class TypeORMMemoryStorage extends MemoryStorage {
 		});
 		if (!source) throw new Error(`Source thread ${args.sourceThreadId} not found`);
 
-		const newThreadId = args.newThreadId ?? generateNanoId();
+		const newThreadId = args.newThreadId ?? randomUUID();
 		const cloneMetadata = {
 			...(source.metadata ?? {}),
 			...(args.metadata ?? {}),

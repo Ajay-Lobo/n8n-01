@@ -184,6 +184,9 @@ describe('GlobalConfig', () => {
 			host: 'https://api.n8n.io/api/',
 			dynamicTemplatesHost: 'https://dynamic-templates.n8n.io/templates',
 		},
+		tokenExchange: {
+			enabled: false,
+		},
 		versionNotifications: {
 			enabled: true,
 			endpoint: 'https://api.n8n.io/api/versions/',
@@ -260,31 +263,33 @@ describe('GlobalConfig', () => {
 			streamStateTtl: 300,
 		},
 		instanceAi: {
-			model: 'anthropic/claude-sonnet-4-5',
+			model: 'anthropic/claude-sonnet-4-6',
 			modelUrl: '',
 			modelApiKey: '',
+			maxContextWindowTokens: 500_000,
 			mcpServers: '',
 			localGatewayDisabled: false,
 			browserMcp: false,
 			lastMessages: 20,
 			embedderModel: '',
 			semanticRecallTopK: 5,
-			timeout: 120000,
 			subAgentMaxSteps: 100,
 			sandboxEnabled: false,
 			sandboxProvider: 'daytona',
 			sandboxImage: 'daytonaio/sandbox:0.5.0',
 			daytonaApiUrl: '',
 			daytonaApiKey: '',
+			n8nSandboxServiceUrl: '',
+			n8nSandboxServiceApiKey: '',
 			sandboxTimeout: 300000,
 			braveSearchApiKey: '',
 			searxngUrl: '',
 			filesystemPath: '',
 			gatewayApiKey: '',
 			threadTtlDays: 90,
-			snapshotPruneInterval: 60,
-			snapshotRetention: 1440,
-			confirmationTimeout: 60,
+			snapshotPruneInterval: 3_600_000,
+			snapshotRetention: 86_400_000,
+			confirmationTimeout: 600_000,
 		},
 		queue: {
 			health: {
@@ -476,7 +481,6 @@ describe('GlobalConfig', () => {
 		// @ts-expect-error structuredClone ignores properties defined as a getter
 		ai: {
 			enabled: false,
-			persistBuilderSessions: false,
 			timeout: 3600000,
 			allowSendingParameterValues: true,
 		},
@@ -488,6 +492,11 @@ describe('GlobalConfig', () => {
 			trimmingMinimumAgeDays: 7,
 			trimmingTimeWindowDays: 2,
 			trimOnStartUp: false,
+		},
+		expressionEngine: {
+			engine: 'legacy',
+			poolSize: 1,
+			maxCodeCacheSize: 1024,
 		},
 	} satisfies GlobalConfigShape;
 

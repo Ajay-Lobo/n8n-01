@@ -50,7 +50,7 @@ const URL_FIELD_MAP: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 /** Credential types for sandbox and search services. */
-const SANDBOX_CREDENTIAL_TYPES = ['daytonaApi'];
+const SANDBOX_CREDENTIAL_TYPES = ['daytonaApi', 'httpHeaderAuth'];
 const SEARCH_CREDENTIAL_TYPES = ['braveSearchApi', 'searXngApi'];
 const SERVICE_CREDENTIAL_TYPES = [...SANDBOX_CREDENTIAL_TYPES, ...SEARCH_CREDENTIAL_TYPES];
 
@@ -59,7 +59,6 @@ interface PersistedAdminSettings {
 	lastMessages?: number;
 	embedderModel?: string;
 	semanticRecallTopK?: number;
-	timeout?: number;
 	subAgentMaxSteps?: number;
 	browserMcp?: boolean;
 	permissions?: Partial<InstanceAiPermissions>;
@@ -69,6 +68,7 @@ interface PersistedAdminSettings {
 	sandboxImage?: string;
 	sandboxTimeout?: number;
 	daytonaCredentialId?: string | null;
+	n8nSandboxCredentialId?: string | null;
 	searchCredentialId?: string | null;
 	localGatewayDisabled?: boolean;
 }
@@ -90,6 +90,8 @@ export class InstanceAiSettingsService {
 	/** Admin-level credential IDs for sandbox and search services. */
 	private adminDaytonaCredentialId: string | null = null;
 
+	private adminN8nSandboxCredentialId: string | null = null;
+
 	private adminSearchCredentialId: string | null = null;
 
 	/** In-memory cache of per-user preferences keyed by userId. */
@@ -109,20 +111,10 @@ export class InstanceAiSettingsService {
 		const row = await this.settingsRepository.findByKey(ADMIN_SETTINGS_KEY);
 		if (!row) return;
 
-		const persisted = jsonParse<PersistedAdminSettings & PersistedUserPreferences>(row.value, {
+		const persisted = jsonParse<PersistedAdminSettings>(row.value, {
 			fallbackValue: {},
 		});
 		this.applyAdminSettings(persisted);
-
-		// Migrate legacy user fields from admin settings (credentialId, modelName)
-		// — these were previously stored in the shared settings blob.
-		// They become defaults for users who haven't set their own preferences yet.
-		if (persisted.credentialId !== undefined || persisted.modelName !== undefined) {
-			this.userPreferences.set('__legacy_default__', {
-				credentialId: persisted.credentialId,
-				modelName: persisted.modelName,
-			});
-		}
 	}
 
 	// ── Admin settings ────────────────────────────────────────────────────
@@ -133,7 +125,6 @@ export class InstanceAiSettingsService {
 			lastMessages: c.lastMessages,
 			embedderModel: c.embedderModel,
 			semanticRecallTopK: c.semanticRecallTopK,
-			timeout: c.timeout,
 			subAgentMaxSteps: c.subAgentMaxSteps,
 			browserMcp: c.browserMcp,
 			permissions: { ...this.permissions },
@@ -143,6 +134,7 @@ export class InstanceAiSettingsService {
 			sandboxImage: c.sandboxImage,
 			sandboxTimeout: c.sandboxTimeout,
 			daytonaCredentialId: this.adminDaytonaCredentialId,
+			n8nSandboxCredentialId: this.adminN8nSandboxCredentialId,
 			searchCredentialId: this.adminSearchCredentialId,
 			localGatewayDisabled: this.isLocalGatewayDisabled(),
 		};
@@ -155,7 +147,6 @@ export class InstanceAiSettingsService {
 		if (update.lastMessages !== undefined) c.lastMessages = update.lastMessages;
 		if (update.embedderModel !== undefined) c.embedderModel = update.embedderModel;
 		if (update.semanticRecallTopK !== undefined) c.semanticRecallTopK = update.semanticRecallTopK;
-		if (update.timeout !== undefined) c.timeout = update.timeout;
 		if (update.subAgentMaxSteps !== undefined) c.subAgentMaxSteps = update.subAgentMaxSteps;
 		if (update.browserMcp !== undefined) c.browserMcp = update.browserMcp;
 		if (update.permissions) {
@@ -168,6 +159,8 @@ export class InstanceAiSettingsService {
 		if (update.sandboxTimeout !== undefined) c.sandboxTimeout = update.sandboxTimeout;
 		if (update.daytonaCredentialId !== undefined)
 			this.adminDaytonaCredentialId = update.daytonaCredentialId;
+		if (update.n8nSandboxCredentialId !== undefined)
+			this.adminN8nSandboxCredentialId = update.n8nSandboxCredentialId;
 		if (update.searchCredentialId !== undefined)
 			this.adminSearchCredentialId = update.searchCredentialId;
 		if (update.localGatewayDisabled !== undefined)
@@ -274,6 +267,37 @@ export class InstanceAiSettingsService {
 		return {
 			apiUrl: typeof data.apiUrl === 'string' ? data.apiUrl : undefined,
 			apiKey: typeof data.apiKey === 'string' ? data.apiKey : undefined,
+		};
+	}
+
+	async resolveN8nSandboxConfig(user: User): Promise<{ serviceUrl?: string; apiKey?: string }> {
+		const { n8nSandboxServiceUrl, n8nSandboxServiceApiKey } = this.config;
+		const credentialId = this.adminN8nSandboxCredentialId;
+		if (!credentialId) {
+			return {
+				serviceUrl: n8nSandboxServiceUrl || undefined,
+				apiKey: n8nSandboxServiceApiKey || undefined,
+			};
+		}
+
+		const credential = await this.credentialsFinderService.findCredentialForUser(
+			credentialId,
+			user,
+			['credential:read'],
+		);
+		if (!credential) {
+			return {
+				serviceUrl: n8nSandboxServiceUrl || undefined,
+				apiKey: n8nSandboxServiceApiKey || undefined,
+			};
+		}
+
+		const data = this.credentialsService.decrypt(credential, true);
+		const headerName = typeof data.name === 'string' ? data.name.trim().toLowerCase() : '';
+		const apiKey = typeof data.value === 'string' ? data.value : undefined;
+		return {
+			serviceUrl: n8nSandboxServiceUrl || undefined,
+			apiKey: headerName === 'x-api-key' ? apiKey : n8nSandboxServiceApiKey || undefined,
 		};
 	}
 
@@ -402,20 +426,13 @@ export class InstanceAiSettingsService {
 		if (persisted.embedderModel !== undefined) c.embedderModel = persisted.embedderModel;
 		if (persisted.semanticRecallTopK !== undefined)
 			c.semanticRecallTopK = persisted.semanticRecallTopK;
-		if (persisted.timeout !== undefined) c.timeout = persisted.timeout;
 		if (persisted.subAgentMaxSteps !== undefined) c.subAgentMaxSteps = persisted.subAgentMaxSteps;
 		if (persisted.browserMcp !== undefined) c.browserMcp = persisted.browserMcp;
 		if (persisted.permissions) {
-			// Migrate legacy "activateWorkflow" → "publishWorkflow"
-			const perms = { ...persisted.permissions } as Record<string, unknown>;
-			if ('activateWorkflow' in perms && !('publishWorkflow' in perms)) {
-				perms.publishWorkflow = perms.activateWorkflow;
-				delete perms.activateWorkflow;
-			}
 			this.permissions = {
 				...DEFAULT_INSTANCE_AI_PERMISSIONS,
-				...perms,
-			} as typeof this.permissions;
+				...persisted.permissions,
+			};
 		}
 		if (persisted.mcpServers !== undefined) c.mcpServers = persisted.mcpServers;
 		if (persisted.sandboxEnabled !== undefined) c.sandboxEnabled = persisted.sandboxEnabled;
@@ -424,6 +441,8 @@ export class InstanceAiSettingsService {
 		if (persisted.sandboxTimeout !== undefined) c.sandboxTimeout = persisted.sandboxTimeout;
 		if (persisted.daytonaCredentialId !== undefined)
 			this.adminDaytonaCredentialId = persisted.daytonaCredentialId;
+		if (persisted.n8nSandboxCredentialId !== undefined)
+			this.adminN8nSandboxCredentialId = persisted.n8nSandboxCredentialId;
 		if (persisted.searchCredentialId !== undefined)
 			this.adminSearchCredentialId = persisted.searchCredentialId;
 		if (persisted.localGatewayDisabled !== undefined)
@@ -441,9 +460,7 @@ export class InstanceAiSettingsService {
 			return { ...prefs };
 		}
 
-		// Fall back to legacy defaults (migrated from old shared settings)
-		const legacy = this.userPreferences.get('__legacy_default__');
-		return legacy ? { ...legacy } : {};
+		return {};
 	}
 
 	private async persistAdminSettings(): Promise<void> {
@@ -452,7 +469,6 @@ export class InstanceAiSettingsService {
 			lastMessages: c.lastMessages,
 			embedderModel: c.embedderModel,
 			semanticRecallTopK: c.semanticRecallTopK,
-			timeout: c.timeout,
 			subAgentMaxSteps: c.subAgentMaxSteps,
 			browserMcp: c.browserMcp,
 			permissions: this.permissions,
@@ -462,6 +478,7 @@ export class InstanceAiSettingsService {
 			sandboxImage: c.sandboxImage,
 			sandboxTimeout: c.sandboxTimeout,
 			daytonaCredentialId: this.adminDaytonaCredentialId,
+			n8nSandboxCredentialId: this.adminN8nSandboxCredentialId,
 			searchCredentialId: this.adminSearchCredentialId,
 			localGatewayDisabled: c.localGatewayDisabled,
 		};

@@ -2,9 +2,9 @@ import { Config, Env } from '../decorators';
 
 @Config
 export class InstanceAiConfig {
-	/** LLM model in provider/model format (e.g. "anthropic/claude-sonnet-4-5"). */
+	/** LLM model in provider/model format (e.g. "anthropic/claude-sonnet-4-6"). */
 	@Env('N8N_INSTANCE_AI_MODEL')
-	model: string = 'anthropic/claude-sonnet-4-5';
+	model: string = 'anthropic/claude-sonnet-4-6';
 
 	/** Base URL for an OpenAI-compatible endpoint (e.g. "http://localhost:1234/v1" for LM Studio). */
 	@Env('N8N_INSTANCE_AI_MODEL_URL')
@@ -13,6 +13,14 @@ export class InstanceAiConfig {
 	/** API key for the custom model endpoint (optional — some local servers don't require one). */
 	@Env('N8N_INSTANCE_AI_MODEL_API_KEY')
 	modelApiKey: string = '';
+
+	/**
+	 * Hard cap on the context window size (in tokens). When set, the effective
+	 * context window is the lesser of this value and the model's native capability.
+	 * 0 = use the model's full context window.
+	 */
+	@Env('N8N_INSTANCE_AI_MAX_CONTEXT_WINDOW_TOKENS')
+	maxContextWindowTokens: number = 500_000;
 
 	/** Comma-separated name=url pairs for MCP servers (e.g. "github=https://mcp.github.com/sse"). */
 	@Env('N8N_INSTANCE_AI_MCP_SERVERS')
@@ -29,10 +37,6 @@ export class InstanceAiConfig {
 	/** Number of semantically similar messages to retrieve. */
 	@Env('N8N_INSTANCE_AI_SEMANTIC_RECALL_TOP_K')
 	semanticRecallTopK: number = 5;
-
-	/** Agent response timeout in milliseconds. */
-	@Env('N8N_INSTANCE_AI_TIMEOUT')
-	timeout: number = 120_000;
 
 	/** Maximum LLM reasoning steps for sub-agents spawned via delegate tool. */
 	@Env('N8N_INSTANCE_AI_SUB_AGENT_MAX_STEPS')
@@ -62,6 +66,14 @@ export class InstanceAiConfig {
 	@Env('DAYTONA_API_KEY')
 	daytonaApiKey: string = '';
 
+	/** n8n sandbox service base URL. */
+	@Env('N8N_SANDBOX_SERVICE_URL')
+	n8nSandboxServiceUrl: string = '';
+
+	/** n8n sandbox service API key. */
+	@Env('N8N_SANDBOX_SERVICE_API_KEY')
+	n8nSandboxServiceApiKey: string = '';
+
 	/** Docker image for the Daytona sandbox (default: daytonaio/sandbox:0.5.0). */
 	@Env('N8N_INSTANCE_AI_SANDBOX_IMAGE')
 	sandboxImage: string = 'daytonaio/sandbox:0.5.0';
@@ -78,11 +90,11 @@ export class InstanceAiConfig {
 	@Env('N8N_INSTANCE_AI_SEARXNG_URL')
 	searxngUrl: string = '';
 
-	/** Restrict filesystem access to this directory path. Empty = full filesystem access (reads any path the n8n process can access). */
+	/** Base directory for server-side filesystem access. Empty = filesystem access disabled. */
 	@Env('N8N_INSTANCE_AI_FILESYSTEM_PATH')
 	filesystemPath: string = '';
 
-	/** API key for the filesystem gateway daemon. When set, enables the gateway endpoint for remote filesystem access. */
+	/** Optional static API key for the filesystem gateway. When set, accepted alongside per-user pairing/session keys. */
 	@Env('N8N_INSTANCE_AI_GATEWAY_API_KEY')
 	gatewayApiKey: string = '';
 
@@ -90,15 +102,15 @@ export class InstanceAiConfig {
 	@Env('N8N_INSTANCE_AI_THREAD_TTL_DAYS')
 	threadTtlDays: number = 90;
 
-	/** Interval in minutes between snapshot pruning runs. 0 = disabled. */
+	/** Interval in milliseconds between snapshot pruning runs. 0 = disabled. */
 	@Env('N8N_INSTANCE_AI_SNAPSHOT_PRUNE_INTERVAL')
-	snapshotPruneInterval: number = 60;
+	snapshotPruneInterval: number = 60 * 60 * 1000; // 1 hour
 
-	/** Retention period in minutes for orphaned workflow snapshots before pruning. */
+	/** Retention period in milliseconds for orphaned workflow snapshots before pruning. */
 	@Env('N8N_INSTANCE_AI_SNAPSHOT_RETENTION')
-	snapshotRetention: number = 1440;
+	snapshotRetention: number = 24 * 60 * 60 * 1000; // 24 hours
 
-	/** Timeout in minutes for HITL confirmation requests. 0 = no timeout. */
+	/** Timeout in milliseconds for HITL confirmation requests. 0 = no timeout. */
 	@Env('N8N_INSTANCE_AI_CONFIRMATION_TIMEOUT')
-	confirmationTimeout: number = 60;
+	confirmationTimeout: number = 10 * 60 * 1000; // 10 minutes
 }

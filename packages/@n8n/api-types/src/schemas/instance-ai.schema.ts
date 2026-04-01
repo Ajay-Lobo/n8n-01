@@ -806,7 +806,6 @@ export interface InstanceAiAdminSettingsResponse {
 	lastMessages: number;
 	embedderModel: string;
 	semanticRecallTopK: number;
-	timeout: number;
 	subAgentMaxSteps: number;
 	browserMcp: boolean;
 	permissions: InstanceAiPermissions;
@@ -816,6 +815,7 @@ export interface InstanceAiAdminSettingsResponse {
 	sandboxImage: string;
 	sandboxTimeout: number;
 	daytonaCredentialId: string | null;
+	n8nSandboxCredentialId: string | null;
 	searchCredentialId: string | null;
 	localGatewayDisabled: boolean;
 }
@@ -824,7 +824,6 @@ export class InstanceAiAdminSettingsUpdateRequest extends Z.class({
 	lastMessages: z.number().int().positive().optional(),
 	embedderModel: z.string().optional(),
 	semanticRecallTopK: z.number().int().positive().optional(),
-	timeout: z.number().int().positive().optional(),
 	subAgentMaxSteps: z.number().int().positive().optional(),
 	browserMcp: z.boolean().optional(),
 	permissions: instanceAiPermissionsSchema.partial().optional(),
@@ -834,6 +833,7 @@ export class InstanceAiAdminSettingsUpdateRequest extends Z.class({
 	sandboxImage: z.string().optional(),
 	sandboxTimeout: z.number().int().positive().optional(),
 	daytonaCredentialId: z.string().nullable().optional(),
+	n8nSandboxCredentialId: z.string().nullable().optional(),
 	searchCredentialId: z.string().nullable().optional(),
 	localGatewayDisabled: z.boolean().optional(),
 }) {}

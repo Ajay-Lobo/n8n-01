@@ -1,3 +1,4 @@
+export { wrapUntrustedData } from './tools/web-research/sanitize-web-content';
 export { generateCompactionSummary } from './compaction';
 export type { CompactionInput } from './compaction';
 export { createDomainAccessTracker } from './domain-access';
@@ -15,7 +16,6 @@ export { startDetachedDelegateTask } from './tools/orchestration/delegate.tool';
 export { startResearchAgentTask } from './tools/orchestration/research-with-agent.tool';
 export { createMemory } from './memory/memory-config';
 export {
-	AgentTreeSnapshotStorage,
 	iterationEntrySchema,
 	formatPreviousAttempts,
 	MastraIterationLogStorage,
