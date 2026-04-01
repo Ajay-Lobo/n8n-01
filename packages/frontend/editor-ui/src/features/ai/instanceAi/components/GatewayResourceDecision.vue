@@ -42,8 +42,8 @@ function findByDecision(decision: string): OptionEntry | undefined {
 
 const denyPrimary = computed(() => findByDecision('denyOnce'));
 
-const denyDropdownItems = computed<ActionDropdownItem[]>(() => {
-	const items: ActionDropdownItem[] = [];
+const denyDropdownItems = computed<ActionDropdownItem<string>[]>(() => {
+	const items: ActionDropdownItem<string>[] = [];
 	const alwaysDeny = findByDecision('alwaysDeny');
 	if (alwaysDeny) items.push({ id: alwaysDeny.token, label: alwaysDeny.label });
 	return items;
@@ -51,8 +51,8 @@ const denyDropdownItems = computed<ActionDropdownItem[]>(() => {
 
 const approvePrimary = computed(() => findByDecision('allowForSession'));
 
-const approveDropdownItems = computed<ActionDropdownItem[]>(() => {
-	const items: ActionDropdownItem[] = [];
+const approveDropdownItems = computed<ActionDropdownItem<string>[]>(() => {
+	const items: ActionDropdownItem<string>[] = [];
 	const allowOnce = findByDecision('allowOnce');
 	const alwaysAllow = findByDecision('alwaysAllow');
 	if (allowOnce) items.push({ id: allowOnce.token, label: allowOnce.label });

@@ -98,7 +98,11 @@ describe('createToolsFromLocalMcpServer', () => {
 
 		it('falls back to record schema when inputSchema conversion fails', () => {
 			const server = makeMockServer([
-				{ name: 'bad_tool', description: 'Bad schema', inputSchema: { $ref: '#/broken' } },
+				{
+					name: 'bad_tool',
+					description: 'Bad schema',
+					inputSchema: { $ref: '#/broken' } as unknown as McpTool['inputSchema'],
+				},
 			]);
 			// Should not throw — the tool must be created even with a bad schema
 			expect(() => createToolsFromLocalMcpServer(server)).not.toThrow();

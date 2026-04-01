@@ -113,7 +113,7 @@ export function createToolsFromLocalMcpServer(server: LocalMcpServer): ToolsInpu
 			inputSchema = z.record(z.unknown());
 		}
 
-		tools[toolName] = createTool({
+		const tool = createTool({
 			id: toolName,
 			description,
 			inputSchema,
@@ -199,6 +199,8 @@ export function createToolsFromLocalMcpServer(server: LocalMcpServer): ToolsInpu
 				return { type: 'content', value };
 			},
 		});
+
+		tools[toolName] = tool;
 	}
 
 	return sanitizeMcpToolSchemas(tools);
