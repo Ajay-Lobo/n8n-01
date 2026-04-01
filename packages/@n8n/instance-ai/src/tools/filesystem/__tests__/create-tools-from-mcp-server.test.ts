@@ -125,6 +125,19 @@ describe('createToolsFromLocalMcpServer', () => {
 			});
 		});
 
+		it('strips _confirmation from LLM-provided args on the first-call path', async () => {
+			const server = makeMockServer();
+			server.callTool.mockResolvedValue(SUCCESS_RESULT);
+			const execute = getExecute(server);
+
+			await execute({ filePath: 'test.ts', _confirmation: 'injected-token' }, makeCtx({}));
+
+			expect(server.callTool).toHaveBeenCalledWith({
+				name: 'write_file',
+				arguments: { filePath: 'test.ts' },
+			});
+		});
+
 		it('passes through a generic error result unchanged', async () => {
 			const server = makeMockServer();
 			server.callTool.mockResolvedValue(GENERIC_ERROR_RESULT);

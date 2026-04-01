@@ -138,8 +138,10 @@ export function createToolsFromLocalMcpServer(server: LocalMcpServer): ToolsInpu
 					});
 				}
 
-				// First-call path: execute the tool normally
-				const result = await server.callTool({ name: toolName, arguments: args });
+				// First-call path: strip any LLM-provided _confirmation key so the agent
+				// cannot bypass the human confirmation flow by supplying its own token.
+				const { _confirmation: _stripped, ...safeArgs } = args;
+				const result = await server.callTool({ name: toolName, arguments: safeArgs });
 
 				// If the daemon requires a resource-access confirmation, suspend the agent
 				if (result.isError && suspend) {

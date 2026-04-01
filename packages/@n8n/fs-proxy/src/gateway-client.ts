@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { EventSource } from 'eventsource';
 import * as os from 'node:os';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -85,7 +86,7 @@ export class GatewayClient {
 	private browserModule: BrowserModule | null = null;
 
 	/** Secure one-time tokens for pending instance-mode confirmations.
-	 *  resourcesKey → { options: { decision: token } }
+	 *  resourcesKey → { token: decision }
 	 *
 	 *  Keyed by a stable hash of the affected resources so that a token issued
 	 *  for resource A cannot be replayed against a call that affects resource B.
@@ -427,7 +428,7 @@ export class GatewayClient {
 	/** Stable key derived from the affected resources for token scoping. */
 	private buildResourcesKey(resources: AffectedResource[]): string {
 		return resources
-			.map((r) => `${r.toolGroup}:${r.resource}`)
+			.map((r) => createHash('sha256').update(`${r.toolGroup}:${r.resource}`).digest('hex'))
 			.sort()
 			.join('|');
 	}
