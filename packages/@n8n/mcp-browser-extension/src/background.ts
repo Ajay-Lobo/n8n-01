@@ -186,8 +186,10 @@ chrome.tabs.onCreated.addListener((tab) => {
 	if (!isExcluded) {
 		log.debug('[onCreated] adding agent-created tab:', tab.id, url);
 		void relay.addTab(tab.id, tab.title ?? '', url).then(() => {
-			broadcastStatusChange();
-			updateBadge(relay.controlledTabCount);
+			if (relay === activeConnection?.relay) {
+				broadcastStatusChange();
+				updateBadge(relay.controlledTabCount);
+			}
 		});
 	}
 });
@@ -224,8 +226,10 @@ chrome.webNavigation.onCreatedNavigationTarget.addListener((details) => {
 	if (url && !url.startsWith('chrome://') && !url.startsWith('chrome-extension://')) {
 		log.debug('[onCreatedNavigationTarget] adding spawned tab:', details.tabId, url);
 		void relay.addTab(details.tabId, '', url).then(() => {
-			broadcastStatusChange();
-			updateBadge(relay.controlledTabCount);
+			if (relay === activeConnection?.relay) {
+				broadcastStatusChange();
+				updateBadge(relay.controlledTabCount);
+			}
 		});
 	} else {
 		log.debug(

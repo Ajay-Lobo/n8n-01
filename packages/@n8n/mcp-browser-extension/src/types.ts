@@ -95,18 +95,30 @@ export type BackgroundPushMessage = RelayUrlReadyMessage | StatusChangedMessage;
 // ---------------------------------------------------------------------------
 
 export function isConnectResponse(raw: unknown): raw is ConnectResponse {
-	return (
-		raw !== null &&
-		typeof raw === 'object' &&
-		'success' in raw &&
-		typeof (raw as Record<string, unknown>).success === 'boolean'
-	);
+	if (raw === null || typeof raw !== 'object') return false;
+	const obj = raw as Record<string, unknown>;
+	if (typeof obj.success !== 'boolean') return false;
+	if ('error' in obj && typeof obj.error !== 'string') return false;
+	return true;
 }
 
 export function isStatusResponse(raw: unknown): raw is StatusResponse {
 	if (raw === null || typeof raw !== 'object') return false;
 	const obj = raw as Record<string, unknown>;
 	if ('connected' in obj && typeof obj.connected !== 'boolean') return false;
+	if ('tabIds' in obj) {
+		if (!Array.isArray(obj.tabIds)) return false;
+		for (const item of obj.tabIds) {
+			if (
+				!item ||
+				typeof item !== 'object' ||
+				typeof (item as Record<string, unknown>).targetId !== 'string' ||
+				typeof (item as Record<string, unknown>).chromeTabId !== 'number'
+			) {
+				return false;
+			}
+		}
+	}
 	return true;
 }
 
