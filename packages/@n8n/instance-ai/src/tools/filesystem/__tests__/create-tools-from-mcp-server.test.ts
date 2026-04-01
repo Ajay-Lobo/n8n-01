@@ -159,6 +159,7 @@ describe('createToolsFromLocalMcpServer', () => {
 			await execute({ filePath: 'test.ts' }, makeCtx({ suspend }));
 
 			expect(suspend).toHaveBeenCalledTimes(1);
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			expect(suspend.mock.calls[0][0]).toMatchObject({
 				inputType: 'resource-decision',
 				severity: 'warning',
@@ -177,6 +178,7 @@ describe('createToolsFromLocalMcpServer', () => {
 			await execute({}, makeCtx({ suspend }));
 
 			expect(suspend).toHaveBeenCalledTimes(1);
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			expect(suspend.mock.calls[0][0]).toMatchObject({
 				inputType: 'resource-decision',
 				resourceDecision: CONFIRMATION_PAYLOAD,
