@@ -3,13 +3,23 @@ import { computed } from 'vue';
 import { N8nIcon, N8nOption, N8nSelect } from '@n8n/design-system';
 import { useI18n } from '@n8n/i18n';
 import { useRolesStore } from '@/app/stores/roles.store';
-import type { RoleMappingRuleResponse } from '../types';
+import type { RoleMappingRuleResponse, RoleMappingRuleType } from '../types';
 import RuleMappingExpressionInput from './RuleMappingExpressionInput.vue';
 
-const props = defineProps<{
-	rule: RoleMappingRuleResponse;
-	priority: number;
-}>();
+const props = withDefaults(
+	defineProps<{
+		rule: RoleMappingRuleResponse;
+		priority: number;
+		type?: RoleMappingRuleType;
+		projects?: Array<{ id: string; name: string }>;
+		disabled?: boolean;
+	}>(),
+	{
+		type: 'instance',
+		projects: () => [],
+		disabled: false,
+	},
+);
 
 const emit = defineEmits<{
 	update: [id: string, patch: Partial<RoleMappingRuleResponse>];
@@ -25,9 +35,20 @@ const instanceRoleOptions = computed(() =>
 		.filter((role) => !role.systemRole)
 		.map((role) => ({ label: role.displayName, value: role.slug })),
 );
+
+const projectRoleOptions = computed(() =>
+	rolesStore.processedProjectRoles.map((role) => ({
+		label: role.displayName,
+		value: role.slug,
+	})),
+);
+
+const roleOptions = computed(() =>
+	props.type === 'project' ? projectRoleOptions.value : instanceRoleOptions.value,
+);
 </script>
 <template>
-	<div :class="$style.row" data-test-id="rule-row">
+	<div :class="[$style.row, { [$style.disabled]: props.disabled }]" data-test-id="rule-row">
 		<div :class="$style.cellDrag" class="drag-handle" aria-label="Reorder rule">
 			<N8nIcon icon="grip-vertical" size="small" color="text-light" />
 		</div>
@@ -38,23 +59,48 @@ const instanceRoleOptions = computed(() =>
 			<span :class="$style.label">If</span>
 			<RuleMappingExpressionInput
 				:model-value="props.rule.expression"
+				:disabled="props.disabled"
 				:placeholder="
 					i18n.baseText('settings.sso.settings.roleMappingRules.expression.placeholder')
 				"
 				@update:model-value="emit('update', props.rule.id, { expression: $event })"
 			/>
 		</div>
+		<div v-if="props.type === 'project'" :class="$style.cellProject">
+			<span :class="$style.label">in</span>
+			<N8nSelect
+				:model-value="props.rule.projectIds"
+				size="small"
+				multiple
+				:disabled="props.disabled"
+				placeholder="Select projects"
+				data-test-id="rule-project-select"
+				@update:model-value="
+					emit('update', props.rule.id, {
+						projectIds: ($event as string[]) ?? [],
+					})
+				"
+			>
+				<N8nOption
+					v-for="project in props.projects"
+					:key="project.id"
+					:label="project.name"
+					:value="project.id"
+				/>
+			</N8nSelect>
+		</div>
 		<div :class="$style.cellRole">
 			<span :class="$style.label">assign</span>
 			<N8nSelect
 				:model-value="props.rule.role"
 				size="small"
+				:disabled="props.disabled"
 				placeholder="Select role"
 				data-test-id="rule-role-select"
 				@update:model-value="emit('update', props.rule.id, { role: String($event) })"
 			>
 				<N8nOption
-					v-for="option in instanceRoleOptions"
+					v-for="option in roleOptions"
 					:key="option.value"
 					:label="option.label"
 					:value="option.value"
@@ -66,10 +112,10 @@ const instanceRoleOptions = computed(() =>
 				icon="copy"
 				size="small"
 				color="text-light"
-				:class="$style.actionIcon"
+				:class="[$style.actionIcon, { [$style.disabledIcon]: props.disabled }]"
 				aria-label="Duplicate rule"
 				data-test-id="rule-copy-button"
-				@click="emit('duplicate', props.rule.id)"
+				@click="!props.disabled && emit('duplicate', props.rule.id)"
 			/>
 		</div>
 		<div :class="$style.cellAction">
@@ -77,10 +123,10 @@ const instanceRoleOptions = computed(() =>
 				icon="trash-2"
 				size="small"
 				color="text-light"
-				:class="$style.actionIcon"
+				:class="[$style.actionIcon, { [$style.disabledIcon]: props.disabled }]"
 				aria-label="Delete rule"
 				data-test-id="rule-delete-button"
-				@click="emit('delete', props.rule.id)"
+				@click="!props.disabled && emit('delete', props.rule.id)"
 			/>
 		</div>
 	</div>
@@ -130,6 +176,14 @@ const instanceRoleOptions = computed(() =>
 	min-width: 0;
 }
 
+.cellProject {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing--2xs);
+	padding: 0 var(--spacing--2xs);
+	flex-shrink: 0;
+}
+
 .cellRole {
 	display: flex;
 	align-items: center;
@@ -153,6 +207,20 @@ const instanceRoleOptions = computed(() =>
 	&:hover {
 		color: var(--color--text) !important;
 	}
+}
+
+.disabledIcon {
+	cursor: not-allowed;
+	opacity: 0.5;
+
+	&:hover {
+		color: var(--color--text--tint-2) !important;
+	}
+}
+
+.disabled {
+	opacity: 0.6;
+	pointer-events: auto;
 }
 
 .label {
