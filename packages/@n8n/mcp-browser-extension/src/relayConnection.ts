@@ -8,6 +8,7 @@
  */
 
 import { createLogger } from './logger';
+import type { TabManagementSettings } from './types';
 
 interface ProtocolCommand {
 	id: number;
@@ -21,11 +22,6 @@ interface ProtocolResponse {
 	params?: Record<string, unknown>;
 	result?: unknown;
 	error?: string;
-}
-
-export interface TabManagementSettings {
-	allowTabCreation: boolean;
-	allowTabClosing: boolean;
 }
 
 const DEFAULT_SETTINGS: TabManagementSettings = {
@@ -175,6 +171,11 @@ export class RelayConnection {
 
 	setSettings(settings: TabManagementSettings): void {
 		this.settings = settings;
+	}
+
+	/** Return the number of currently controlled tabs. */
+	get controlledTabCount(): number {
+		return this.tabs.size;
 	}
 
 	/** Return controlled tab identifiers (both CDP targetId and Chrome tab ID). */
@@ -463,7 +464,7 @@ export class RelayConnection {
 	private async handleCreateTab(params: Record<string, unknown>): Promise<unknown> {
 		if (!this.settings.allowTabCreation) {
 			throw new Error(
-				'Tab creation is disabled. Enable it in the n8n Browser Bridge extension settings.',
+				'Tab creation is disabled. Enable it in the n8n Browser Use extension settings.',
 			);
 		}
 
@@ -491,7 +492,7 @@ export class RelayConnection {
 	private async handleCloseTab(params: Record<string, unknown>): Promise<unknown> {
 		if (!this.settings.allowTabClosing) {
 			throw new Error(
-				'Tab closing is disabled. Enable it in the n8n Browser Bridge extension settings.',
+				'Tab closing is disabled. Enable it in the n8n Browser Use extension settings.',
 			);
 		}
 

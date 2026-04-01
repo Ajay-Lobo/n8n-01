@@ -6,7 +6,9 @@
  */
 
 import { createLogger } from './logger';
-import { RelayConnection, isEligibleTab, type TabManagementSettings } from './relayConnection';
+import { RelayConnection, isEligibleTab } from './relayConnection';
+import type { TabManagementSettings, ExtensionMessage } from './types';
+import { isTabManagementSettings } from './types';
 
 const log = createLogger('bg');
 
@@ -29,7 +31,9 @@ const DEFAULT_SETTINGS: TabManagementSettings = {
 
 async function loadSettings(): Promise<TabManagementSettings> {
 	const result = await chrome.storage.local.get(SETTINGS_KEY);
-	return (result[SETTINGS_KEY] as TabManagementSettings) ?? DEFAULT_SETTINGS;
+	const stored: unknown = result[SETTINGS_KEY];
+	if (isTabManagementSettings(stored)) return stored;
+	return DEFAULT_SETTINGS;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,55 +42,6 @@ async function loadSettings(): Promise<TabManagementSettings> {
 
 const CONNECT_PAGE = '/dist/connect.html';
 const RELAY_URL_KEY = 'pendingRelayUrl';
-
-// ---------------------------------------------------------------------------
-// Message handling from connect.html UI
-// ---------------------------------------------------------------------------
-
-interface GetTabsMessage {
-	type: 'getTabs';
-}
-
-interface ConnectMessage {
-	type: 'connect';
-	relayUrl: string;
-	selectedTabIds: number[];
-}
-
-interface DisconnectMessage {
-	type: 'disconnect';
-}
-
-interface GetStatusMessage {
-	type: 'getStatus';
-}
-
-interface UpdateSettingsMessage {
-	type: 'updateSettings';
-	settings: TabManagementSettings;
-}
-
-interface GetSettingsMessage {
-	type: 'getSettings';
-}
-
-interface GetRelayUrlMessage {
-	type: 'getRelayUrl';
-}
-
-interface ClearRelayUrlMessage {
-	type: 'clearRelayUrl';
-}
-
-type ExtensionMessage =
-	| GetTabsMessage
-	| ConnectMessage
-	| DisconnectMessage
-	| GetStatusMessage
-	| UpdateSettingsMessage
-	| GetSettingsMessage
-	| GetRelayUrlMessage
-	| ClearRelayUrlMessage;
 
 chrome.runtime.onMessage.addListener(
 	(
@@ -122,9 +77,10 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
 			};
 
 		case 'updateSettings': {
-			await chrome.storage.local.set({ [SETTINGS_KEY]: message.settings });
+			const settings: TabManagementSettings = message.settings;
+			await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
 			if (activeConnection) {
-				activeConnection.relay.setSettings(message.settings);
+				activeConnection.relay.setSettings(settings);
 			}
 			return { success: true };
 		}
@@ -229,7 +185,10 @@ chrome.tabs.onCreated.addListener((tab) => {
 	const isExcluded = url.startsWith('chrome://') || url.startsWith('chrome-extension://');
 	if (!isExcluded) {
 		log.debug('[onCreated] adding agent-created tab:', tab.id, url);
-		void relay.addTab(tab.id, tab.title ?? '', url);
+		void relay.addTab(tab.id, tab.title ?? '', url).then(() => {
+			broadcastStatusChange();
+			updateBadge(relay.controlledTabCount);
+		});
 	}
 });
 
@@ -264,7 +223,10 @@ chrome.webNavigation.onCreatedNavigationTarget.addListener((details) => {
 	const url = details.url;
 	if (url && !url.startsWith('chrome://') && !url.startsWith('chrome-extension://')) {
 		log.debug('[onCreatedNavigationTarget] adding spawned tab:', details.tabId, url);
-		void relay.addTab(details.tabId, '', url);
+		void relay.addTab(details.tabId, '', url).then(() => {
+			broadcastStatusChange();
+			updateBadge(relay.controlledTabCount);
+		});
 	} else {
 		log.debug(
 			'[onCreatedNavigationTarget] URL not eligible yet, waiting for onUpdated:',
@@ -288,7 +250,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 		) {
 			if (!activeConnection.relay.isControlledTab(tabId)) {
 				log.debug('[onUpdated] adding tab via URL update:', tabId, url);
-				void activeConnection.relay.addTab(tabId, changeInfo.title ?? '', url);
+				void activeConnection.relay.addTab(tabId, changeInfo.title ?? '', url).then(() => {
+					broadcastStatusChange();
+					if (activeConnection) {
+						updateBadge(activeConnection.relay.controlledTabCount);
+					}
+				});
 			}
 		}
 	}
@@ -298,6 +265,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 	if (!activeConnection) return;
 	log.debug('tab removed:', tabId);
 	activeConnection.relay.removeTab(tabId);
+	// removeTab may close the connection when no tabs remain, so re-check
+	broadcastStatusChange();
+	if (activeConnection) {
+		updateBadge(activeConnection.relay.controlledTabCount);
+	}
 });
 
 // ---------------------------------------------------------------------------
