@@ -29,7 +29,7 @@ describe('TokenExchangeController', () => {
 
 	beforeEach(() => {
 		jest.resetAllMocks();
-		globalConfig.tokenExchange = { enabled: true };
+		globalConfig.tokenExchange = { enabled: true, trustedKeys: '' };
 		req = mock<AuthlessRequest>({ ip: '127.0.0.1' });
 		res = mock<Response>();
 		res.status.mockReturnThis();
@@ -39,7 +39,7 @@ describe('TokenExchangeController', () => {
 	describe('POST /auth/oauth/token', () => {
 		describe('feature flag', () => {
 			test('returns 501 server_error when token exchange is disabled', async () => {
-				globalConfig.tokenExchange = { enabled: false };
+				globalConfig.tokenExchange = { enabled: false, trustedKeys: '' };
 				req.body = {
 					grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
 					subject_token: 'some-token',

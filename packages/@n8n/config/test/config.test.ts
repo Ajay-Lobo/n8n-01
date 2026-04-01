@@ -186,6 +186,7 @@ describe('GlobalConfig', () => {
 		},
 		tokenExchange: {
 			enabled: false,
+			trustedKeys: '',
 		},
 		versionNotifications: {
 			enabled: true,
