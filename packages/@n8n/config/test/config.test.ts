@@ -186,6 +186,8 @@ describe('GlobalConfig', () => {
 		},
 		tokenExchange: {
 			enabled: false,
+			jtiCleanupIntervalSeconds: 60,
+			jtiCleanupBatchSize: 1000,
 		},
 		versionNotifications: {
 			enabled: true,
