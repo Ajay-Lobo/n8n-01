@@ -457,7 +457,9 @@ export class GatewayClient {
 			const rule = settingsStore.check(resource.toolGroup, resource.resource);
 
 			if (rule === 'deny') {
-				throw new Error(`User denied access to ${resource.toolGroup}: ${resource.resource}`);
+				throw new Error(
+					`User permanently denied access to ${resource.toolGroup}: ${resource.resource}`,
+				);
 			}
 
 			if (rule === 'allow') continue;
