@@ -13,6 +13,7 @@ import { NoRestrictedGlobalsRule } from './no-restricted-globals.js';
 import { NoRestrictedImportsRule } from './no-restricted-imports.js';
 import { NodeClassDescriptionIconMissingRule } from './node-class-description-icon-missing.js';
 import { NodeUsableAsToolRule } from './node-usable-as-tool.js';
+import { OptionsSortedAlphabeticallyRule } from './options-sorted-alphabetically.js';
 import { PackageNameConventionRule } from './package-name-convention.js';
 import { ResourceOperationPatternRule } from './resource-operation-pattern.js';
 
@@ -23,6 +24,7 @@ export const rules = {
 	'credential-password-field': CredentialPasswordFieldRule,
 	'no-deprecated-workflow-functions': NoDeprecatedWorkflowFunctionsRule,
 	'node-usable-as-tool': NodeUsableAsToolRule,
+	'options-sorted-alphabetically': OptionsSortedAlphabeticallyRule,
 	'package-name-convention': PackageNameConventionRule,
 	'credential-test-required': CredentialTestRequiredRule,
 	'no-credential-reuse': NoCredentialReuseRule,
